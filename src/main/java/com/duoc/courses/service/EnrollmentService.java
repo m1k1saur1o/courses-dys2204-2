@@ -67,7 +67,7 @@ public class EnrollmentService {
             saved.getTotalCost(),
             saved.getCreatedAt()
         );
-        enrollmentStorageService.storeEnrollment(saved.getId(), document);
+        enrollmentStorageService.storeEnrollment(student.getId(), saved.getId(), document);
 
         return new EnrollmentResponse(
                 new StudentResponse(student.getId(), student.getName(), student.getEmail()),
