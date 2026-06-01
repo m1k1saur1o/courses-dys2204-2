@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.duoc.courses.dto.CourseSummaryResponse;
 import com.duoc.courses.dto.EnrollmentRequest;
 import com.duoc.courses.dto.EnrollmentResponse;
+import com.duoc.courses.dto.EnrollmentS3Document;
 import com.duoc.courses.dto.StudentResponse;
 import com.duoc.courses.entity.Course;
 import com.duoc.courses.entity.Enrollment;
@@ -29,15 +30,18 @@ public class EnrollmentService {
     private final EnrollmentRepository enrollmentRepository;
     private final StudentRepository studentRepository;
     private final CourseRepository courseRepository;
+    private final EnrollmentStorageService enrollmentStorageService;
 
     public EnrollmentService(
             EnrollmentRepository enrollmentRepository,
             StudentRepository studentRepository,
-            CourseRepository courseRepository
+            CourseRepository courseRepository,
+            EnrollmentStorageService enrollmentStorageService
     ) {
         this.enrollmentRepository = enrollmentRepository;
         this.studentRepository = studentRepository;
         this.courseRepository = courseRepository;
+        this.enrollmentStorageService = enrollmentStorageService;
     }
 
     public EnrollmentResponse createEnrollment(EnrollmentRequest request) {
@@ -55,6 +59,15 @@ public class EnrollmentService {
         enrollment.setStudent(student);
         enrollment.setCourses(new LinkedHashSet<>(courses));
         Enrollment saved = enrollmentRepository.save(enrollment);
+
+        EnrollmentS3Document document = new EnrollmentS3Document(
+            saved.getId(),
+            new StudentResponse(student.getId(), student.getName(), student.getEmail()),
+            courses.stream().map(this::toCourseSummary).toList(),
+            saved.getTotalCost(),
+            saved.getCreatedAt()
+        );
+        enrollmentStorageService.storeEnrollment(saved.getId(), document);
 
         return new EnrollmentResponse(
                 new StudentResponse(student.getId(), student.getName(), student.getEmail()),
